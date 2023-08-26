@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import { ImportStatementParams, ParsedField } from './types';
 
 const PrismaScalarToTypeScript: Record<string, string> = {
@@ -142,18 +143,94 @@ export const makeHelpers = ({
         : entityName(field.type)
     }${when(field.isList, '[]')}`;
 
+  const getClassValidator = (type: string) => {
+    switch (type) {
+      case 'number':
+        return '@IsNumber()';
+      case 'boolean':
+        return '@IsBoolean()';
+      case 'string':
+        return '@IsString()';
+      default:
+        return '';
+    }
+  };
+
+  const getDefaultValue = (key: string, type: string) => {
+    switch (type) {
+      case 'boolean':
+        return Date.now() % 2 === 0;
+      case 'Date':
+        return `"${faker.date.anytime().toISOString()}"`;
+      case 'number':
+        return key === 'id' ? 1 : faker.number.int(50);
+      case 'string':
+        const val = (key: string) => {
+          switch (key) {
+            case 'id':
+              return 1;
+            case 'date':
+              return `"${faker.date.anytime().toISOString()}"`;
+            case 'name':
+              return faker.person.fullName();
+            case 'bio':
+              return faker.person.bio();
+            case 'username':
+              return faker.internet.userName();
+            case 'email':
+              return faker.internet.email();
+            case 'password':
+              return faker.internet.password();
+            case 'firstname':
+              return faker.person.firstName();
+            case 'lastname':
+              return faker.person.lastName();
+            case 'domain':
+              return faker.internet.domainName();
+            case 'url':
+              return faker.internet.url();
+            case 'phone':
+              return faker.phone.number();
+            case 'address':
+              return faker.address.streetAddress();
+            case 'city':
+              return faker.address.city();
+            case 'country':
+              return faker.address.country();
+            case 'zipcode':
+              return faker.address.zipCode();
+            case 'title':
+              return faker.word.words(3);
+            case 'description':
+              return faker.word.words(12);
+
+            default:
+              return faker.lorem.words();
+          }
+        };
+        return `"${val(key)}"`;
+      default:
+        return null;
+    }
+  };
+
   const fieldToDtoProp = (
     field: ParsedField,
     useInputTypes = false,
     forceOptional = false,
   ) =>
-    `${when(
-      field.kind === 'enum',
-      `@ApiProperty({ enum: ${fieldType(field, useInputTypes)}})\n`,
-    )}${field.name}${unless(
+    `${getClassValidator(fieldType(field, useInputTypes))}
+    ${
+      field.kind === 'enum'
+        ? `@ApiProperty({ enum: ${fieldType(field, useInputTypes)}})\n`
+        : `@ApiProperty({ example: ${getDefaultValue(
+            field.name,
+            fieldType(field, useInputTypes),
+          )}})\n`
+    }${field.name}${unless(
       field.isRequired && !forceOptional,
       '?',
-    )}: ${fieldType(field, useInputTypes)};`;
+    )}: ${fieldType(field, useInputTypes)};\n`;
 
   const fieldsToDtoProps = (
     fields: ParsedField[],

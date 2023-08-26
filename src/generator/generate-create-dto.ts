@@ -14,6 +14,8 @@ export const generateCreateDto = ({
   exportRelationModifierClasses,
   templateHelpers: t,
 }: GenerateCreateDtoParam) => `
+import { IsString, IsNumber, IsBoolean } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 ${t.importStatements(imports)}
 
 ${t.each(
